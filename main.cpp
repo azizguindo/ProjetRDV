@@ -39,7 +39,7 @@ void render()
         n.normalize();
         float intensity = n * light_dir;
         if (intensity > 0){
-            triangle(framebuffer, screen_coords, Vec3f(intensity*255,intensity*255, intensity*255)); 
+            triangle(framebuffer, screen_coords, Vec3f(intensity,intensity, intensity)); 
         }
     }
 
