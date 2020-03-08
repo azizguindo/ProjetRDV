@@ -1,5 +1,6 @@
 #include <vector>
 #include <cmath>
+#include <algorithm>
 #include "tgaimage.h"
 #include "geometry.h"
 #include "model.h"
@@ -7,26 +8,78 @@
 
 
 Model *model = NULL;
-const int width  = 800;
-const int height = 800;
+//const int width  = 800;
+//const int height = 800;
 
+void render()
+{
+    std::vector<Vec3f> framebuffer(width * height);
 
-
-int main(int argc, char** argv) {
-	model = new Model("obj/diablo3_pose.obj");
-	TGAImage image(width, height, TGAImage::RGB);
-	for (int i=0; i<model->nfaces(); i++) {
-		std::vector<int> face = model->face(i);
-		Vec2i screen_coords[3];
-    for (int j=0; j<3; j++) {
-        Vec3f world_coords = model->vert(face[j]);
-        screen_coords[j] = Vec2i((world_coords.x+1.)*width/2., (world_coords.y+1.)*height/2.);
+    for (int j = 0; j < height; j++)
+    {   
+        for (int i = 0; i < width; i++)
+        {
+            framebuffer[i + j * width] = Vec3f(0, 0, 0);
+        }
     }
-    triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(rand()%255, rand()%255, rand()%255, 255));
 
-	}
-	image.flip_vertically(); // i want to have the origin at the left bottom corner of the image
-	image.write_tga_file("output.tga");
-	delete model;
-	return 0;
+    Vec3f light_dir(0,0,-1);
+    model = new Model("obj/diablo3_pose.obj");
+    for (int i = 0; i < model->nfaces(); i++){
+        std::vector<int> face = model->face(i);
+        Vec2i screen_coords[3];
+        Vec3f world_coords[3]; 
+        for (int j = 0; j < 3; j++){
+            Vec3f v = model->vert(face[j]);
+            screen_coords[j] = Vec2i((v.x + 1.)*width/2.,(v.y + 1.)*height/2.);
+            world_coords[j]  = v; 
+        }
+
+        Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]);
+        n.normalize();
+        float intensity = n * light_dir;
+        if (intensity > 0){
+            triangle(framebuffer, screen_coords, Vec3f(intensity*255,intensity*255, intensity*255)); 
+        }
+    }
+
+    std::vector<Vec3f> framebuffer_tmp(width * height);
+
+    for (int x = 0; x < width; x++)
+    {
+        for (int y = 0; y < height; y++)
+        {
+           // if ( type ==  HORIZONTAL_FLIP ) {
+                //framebuffer_tmp[ x + y * width ] = framebuffer[ ( width - 1 - x ) + ( y ) * width ];
+            //} else {  
+                framebuffer_tmp[ x + y * width ] = framebuffer[ x + (height - 1 - y ) * width ];
+            //  }
+        }
+    }
+    
+    framebuffer = framebuffer_tmp;
+    
+    
+
+    std::ofstream ofs; // save the framebuffer to file
+    ofs.open("./out.ppm");
+    ofs << "P6\n"<< width << " " << height << std::endl << "\n255\n";
+    for (size_t i = 0; i < height * width; ++i)
+    {
+        for (size_t j = 0; j < 3; j++)
+        {
+            ofs << (char)(255 * std::max(0.f, std::min(1.f, framebuffer[i][j])));
+        }
+    }
+    ofs.close();
+
+    delete model;
+}
+
+int main(int argc, char **argv)
+{
+
+    render();
+
+    return 0;
 }

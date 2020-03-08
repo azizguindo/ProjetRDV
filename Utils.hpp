@@ -1,36 +1,45 @@
-#ifndef UTILS_H
-#define UTILS_H
-const TGAColor white = TGAColor(255, 255, 255, 255);
-const TGAColor red   = TGAColor(255, 0,   0,   255);
+#include <cmath>
+#include <vector> 
+#include "model.h"
+#include "geometry.h"
+const int width  = 800;
+const int height = 800;
+
+Vec3f barycentric(Vec2i *pts, Vec2i P);
 void triangle(Vec2f t1,Vec2f t2,Vec2f t3,TGAImage & image,TGAColor color);
-//algo Bresenham
-void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color);
+void line(std::vector<Vec3f> &framebuffer,int x0, int y0, int x1, int y1,Vec3f color);
 
+Vec3f barycentric(Vec2i *pts, Vec2i P) { 
+    Vec3f u = Vec3f(pts[2][0]-pts[0][0], pts[1][0]-pts[0][0], pts[0][0]-P[0])^ Vec3f(pts[2][1]-pts[0][1], pts[1][1]-pts[0][1], pts[0][1]-P[1]);
+    /* `pts` and `P` has integer value as coordinates
+       so `abs(u[2])` < 1 means `u[2]` is 0, that means
+       triangle is degenerate, in this case return something with negative coordinates */
+    if (std::abs(u[2])<1) return Vec3f(-1,1,1);
+    return Vec3f(1.f-(u.x+u.y)/u.z, u.y/u.z, u.x/u.z); 
+} 
+ 
+void triangle(std::vector<Vec3f> &framebuffer,Vec2i *pts, Vec3f color) {
+    Vec2f bboxmin( std::numeric_limits<float>::max(),  std::numeric_limits<float>::max());
+    Vec2f bboxmax(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+    Vec2f clamp(width-1, height-1);
 
-void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color) {
-    if (t0.y==t1.y && t0.y==t2.y) return; // i dont care about degenerate triangles
-    if (t0.y>t1.y) std::swap(t0, t1);
-    if (t0.y>t2.y) std::swap(t0, t2);
-    if (t1.y>t2.y) std::swap(t1, t2);
-    int total_height = t2.y-t0.y;
-    for (int i=0; i<total_height; i++) {
-        bool second_half = i>t1.y-t0.y || t1.y==t0.y;
-        int segment_height = second_half ? t2.y-t1.y : t1.y-t0.y;
-        float alpha = (float)i/total_height;
-        float beta  = (float)(i-(second_half ? t1.y-t0.y : 0))/segment_height; // be careful: with above conditions no division by zero here
-        Vec2i A =               t0 + (t2-t0)*alpha;
-        Vec2i B = second_half ? t1 + (t2-t1)*beta : t0 + (t1-t0)*beta;
-        if (A.x>B.x) std::swap(A, B);
-        for (int j=A.x; j<=B.x; j++) {
-            image.set(j, t0.y+i, color); // attention, due to int casts t0.y+i != A.y
-        }
-    }
+    for (int i=0; i<3; i++) { 
+        for (int j=0; j<2; j++) { 
+            bboxmin[j] = std::max(0.f, std::min<float>(bboxmin[j], pts[i][j])); 
+            bboxmax[j] = std::min(clamp[j], std::max<float>(bboxmax[j], pts[i][j])); 
+        } 
+    } 
+
+    Vec2i P; 
+    for (P.x=bboxmin.x; P.x<=bboxmax.x; P.x++) { 
+        for (P.y=bboxmin.y; P.y<=bboxmax.y; P.y++) { 
+            Vec3f bc_screen  = barycentric(pts, P); 
+            if (bc_screen.x<0 || bc_screen.y<0 || bc_screen.z<0) continue; 
+            framebuffer[P.x+P.y*width] = color;
+        } 
+    } 
 }
-
-
-
-//algo Bresenham
-void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
+void line(std::vector<Vec3f> &framebuffer,int x0, int y0, int x1, int y1,Vec3f color) {
 	bool steep = false;
 	if (std::abs(x0-x1)<std::abs(y0-y1)) {
 		std::swap(x0, y0);
@@ -45,13 +54,10 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color) {
         float t = (x-x0)/(float)(x1-x0);
         int y = y0*(1.-t) + y1*t;
         if (steep) {
-            image.set(y, x, color);
+            framebuffer[x+y*width] = color;
         } else {
-            image.set(x, y, color);
+            framebuffer[y+x*width] = color;
         }
     }
 
 }
-
-
-#endif
