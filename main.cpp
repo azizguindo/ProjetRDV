@@ -12,20 +12,20 @@
 
 
 Model *model = NULL;
-//const int width  = 800;
-//const int height = 800;
+
+Vec3f world2screen(Vec3f v) {
+    return Vec3f(int((v.x+1.)*width/2.), int((v.y+1.)*height/2.), v.z);
+}
 
 void render()
 {
+    float *zbuffer = new float[width*height];
+    for (int i = 0; i < width * height; i++)
+    {
+        zbuffer[i] = -std::numeric_limits<float>::max();
+    }
     std::vector<Vec3f> framebuffer(width * height);
 
-    for (int j = 0; j < height; j++)
-    {   
-        for (int i = 0; i < width; i++)
-        {
-            framebuffer[i + j * width] = Vec3f(0, 0, 0);
-        }
-    }
 
     Vec3f light_dir(0,0,-1);
     model = new Model("obj/diablo3_pose.obj");
@@ -33,6 +33,8 @@ void render()
         std::vector<int> face = model->face(i);
         Vec2i screen_coords[3];
         Vec3f world_coords[3]; 
+        Vec3f pts[3];
+        for (int j=0; j<3; j++) pts[j] = world2screen(model->vert(face[j]));
         for (int j = 0; j < 3; j++){
             Vec3f v = model->vert(face[j]);
             screen_coords[j] = Vec2i((v.x + 1.)*width/2.,(v.y + 1.)*height/2.);
@@ -43,7 +45,7 @@ void render()
         n.normalize();
         float intensity = n * light_dir;
         if (intensity > 0){
-            triangle(framebuffer, screen_coords, Vec3f(intensity,intensity, intensity)); 
+            triangle(framebuffer,zbuffer, pts, Vec3f(intensity,intensity,intensity)); 
         }
     }
 
