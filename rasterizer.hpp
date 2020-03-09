@@ -6,7 +6,7 @@ const int width  = 800;
 const int height = 800;
 
 Vec3f barycentric(Vec2i *pts, Vec2i P);
-void triangle(Vec2f t1,Vec2f t2,Vec2f t3,TGAImage & image,TGAColor color);
+void triangle(std::vector<Vec3f> &framebuffer,Vec2i *pts, Vec3f color);
 void line(std::vector<Vec3f> &framebuffer,int x0, int y0, int x1, int y1,Vec3f color);
 
 Vec3f barycentric(Vec2i *pts, Vec2i P) { 

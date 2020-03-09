@@ -1,10 +1,14 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
-#include "tgaimage.h"
+#include <iostream>
+#include <fstream>
+#include <string.h>
+#include <time.h>
+#include <math.h>
 #include "geometry.h"
 #include "model.h"
-#include "Utils.hpp"
+#include "rasterizer.hpp"
 
 
 Model *model = NULL;
